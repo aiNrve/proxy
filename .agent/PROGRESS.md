@@ -24,9 +24,14 @@
 - [x] Tests for adapter package
 - [x] go build ./... passes
 - [x] go test ./... passes
+- [x] Switched startup provider wiring to github.com/aiNrve/adapters registry
+- [x] Registered enabled providers via external packages (openai, anthropic, groq, together, gemini, ollama)
+- [x] Router now accepts adapters registry input
+- [x] Added compatibility wrapper from external adapters to internal gateway contract
+- [x] go build ./... passes after registry migration
 
 ## Current session working on
-Completed all requested steps
+Completed adapter registry migration and build verification
 
 ## Known issues / blockers
 (add anything here that is incomplete or needs revisiting)

@@ -11,7 +11,13 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/aiNrve/proxy/internal/adapter"
+	"github.com/aiNrve/adapters"
+	"github.com/aiNrve/adapters/providers/anthropic"
+	"github.com/aiNrve/adapters/providers/gemini"
+	"github.com/aiNrve/adapters/providers/groq"
+	"github.com/aiNrve/adapters/providers/ollama"
+	"github.com/aiNrve/adapters/providers/openai"
+	"github.com/aiNrve/adapters/providers/together"
 	"github.com/aiNrve/proxy/internal/config"
 	"github.com/aiNrve/proxy/internal/gateway"
 	"github.com/aiNrve/proxy/internal/logger"
@@ -42,12 +48,12 @@ func run() error {
 		_ = appLogger.Sync()
 	}()
 
-	adapters := buildAdapters(cfg, appLogger)
-	if len(adapters) == 0 {
-		return errors.New("no adapters initialized: enable at least one provider and set its API key")
+	registry := buildRegistry(cfg, appLogger)
+	if len(registry.All()) == 0 {
+		return errors.New("no adapters initialized: enable at least one provider")
 	}
 
-	rt := router.NewRouter(adapters, cfg)
+	rt := router.NewRouter(registry, cfg)
 	healthCtx, healthCancel := context.WithCancel(context.Background())
 	defer healthCancel()
 	rt.StartHealthChecker(healthCtx, time.Duration(cfg.HealthCheckInterval)*time.Second)
@@ -125,37 +131,44 @@ func buildLogger(level string) (*zap.Logger, error) {
 	return cfg.Build()
 }
 
-func buildAdapters(cfg config.Config, appLogger *zap.Logger) []adapter.Adapter {
-	adapters := make([]adapter.Adapter, 0, 5)
+func buildRegistry(cfg config.Config, appLogger *zap.Logger) *adapters.Registry {
+	registry := adapters.NewRegistry()
 
-	openAI := cfg.Providers["openai"]
-	if openAI.Enabled && strings.TrimSpace(openAI.APIKey) != "" {
-		adapters = append(adapters, adapter.NewOpenAIAdapter(openAI.APIKey, openAI.BaseURL))
+	if provider := cfg.Providers["openai"]; provider.Enabled {
+		registry.Register("openai", openai.New(adapterConfig(provider)))
 	}
 
-	anthropic := cfg.Providers["anthropic"]
-	if anthropic.Enabled && strings.TrimSpace(anthropic.APIKey) != "" {
-		adapters = append(adapters, adapter.NewAnthropicAdapter(anthropic.APIKey, anthropic.BaseURL))
+	if provider := cfg.Providers["anthropic"]; provider.Enabled {
+		registry.Register("anthropic", anthropic.New(adapterConfig(provider)))
 	}
 
-	groq := cfg.Providers["groq"]
-	if groq.Enabled && strings.TrimSpace(groq.APIKey) != "" {
-		adapters = append(adapters, adapter.NewGroqAdapter(groq.APIKey, groq.BaseURL))
+	if provider := cfg.Providers["groq"]; provider.Enabled {
+		registry.Register("groq", groq.New(adapterConfig(provider)))
 	}
 
-	together := cfg.Providers["together"]
-	if together.Enabled && strings.TrimSpace(together.APIKey) != "" {
-		adapters = append(adapters, adapter.NewTogetherAdapter(together.APIKey, together.BaseURL))
+	if provider := cfg.Providers["together"]; provider.Enabled {
+		registry.Register("together", together.New(adapterConfig(provider)))
 	}
 
-	gemini := cfg.Providers["gemini"]
-	if gemini.Enabled && strings.TrimSpace(gemini.APIKey) != "" {
-		adapters = append(adapters, adapter.NewGeminiAdapter(gemini.APIKey, gemini.BaseURL))
+	if provider := cfg.Providers["gemini"]; provider.Enabled {
+		registry.Register("gemini", gemini.New(adapterConfig(provider)))
 	}
 
-	if len(adapters) == 0 {
-		appLogger.Warn("no adapters enabled with API keys")
+	if provider := cfg.Providers["ollama"]; provider.Enabled {
+		registry.Register("ollama", ollama.New(adapterConfig(provider)))
 	}
 
-	return adapters
+	if len(registry.All()) == 0 {
+		appLogger.Warn("no providers enabled")
+	}
+
+	return registry
+}
+
+func adapterConfig(provider config.ProviderConfig) adapters.AdapterConfig {
+	return adapters.AdapterConfig{
+		APIKey:  provider.APIKey,
+		BaseURL: provider.BaseURL,
+		Weight:  provider.Weight,
+	}
 }

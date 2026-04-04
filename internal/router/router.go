@@ -8,6 +8,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/aiNrve/adapters"
 	"github.com/aiNrve/proxy/internal/adapter"
 	"github.com/aiNrve/proxy/internal/config"
 	"github.com/aiNrve/proxy/internal/models"
@@ -27,18 +28,28 @@ type Router struct {
 	latency      *latencyTracker
 }
 
-// NewRouter creates a router with the given adapters and runtime config.
-func NewRouter(adapters []adapter.Adapter, cfg config.Config) *Router {
+// NewRouter creates a router from the external adapter registry and runtime config.
+func NewRouter(registry *adapters.Registry, cfg config.Config) *Router {
+	registered := make([]adapters.Adapter, 0)
+	if registry != nil {
+		registered = registry.All()
+	}
+
 	r := &Router{
-		adapters:     make(map[string]adapter.Adapter, len(adapters)),
-		order:        make([]string, 0, len(adapters)),
+		adapters:     make(map[string]adapter.Adapter, len(registered)),
+		order:        make([]string, 0, len(registered)),
 		cfg:          cfg,
-		health:       make(map[string]bool, len(adapters)),
-		coolingUntil: make(map[string]time.Time, len(adapters)),
+		health:       make(map[string]bool, len(registered)),
+		coolingUntil: make(map[string]time.Time, len(registered)),
 		latency:      newLatencyTracker(100),
 	}
 
-	for _, item := range adapters {
+	for _, external := range registered {
+		item := adapter.WrapExternal(external)
+		if item == nil {
+			continue
+		}
+
 		name := normalizeName(item.Name())
 		if name == "" {
 			continue

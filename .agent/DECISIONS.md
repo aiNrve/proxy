@@ -26,3 +26,9 @@ On 429 (rate limit), mark provider as cooling for 60s.
 Retry selection is driven by context-level provider exclusions.
 Reason: keeps Route() deterministic and lets gateway retry once without
 introducing hidden side effects in the scoring path.
+
+## ADR-007: Startup provider registration uses github.com/aiNrve/adapters
+Provider construction in cmd/proxy now builds an adapters.Registry and registers
+enabled providers from external provider packages.
+Reason: centralize provider implementations in a shared module while preserving
+current gateway/router behavior via a small internal compatibility wrapper.
