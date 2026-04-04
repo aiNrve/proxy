@@ -1,0 +1,36 @@
+version: "3.9"
+
+services:
+  proxy:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: ainrve-proxy
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      CONFIG_PATH: /app/ainrve.yaml
+      DATABASE_URL: postgres://postgres:postgres@postgres:5432/ainrve?sslmode=disable
+      PORT: "8080"
+    depends_on:
+      - postgres
+    volumes:
+      - ./ainrve.yaml.example:/app/ainrve.yaml:ro
+
+  postgres:
+    image: postgres:16-alpine
+    container_name: ainrve-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ainrve
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+volumes:
+  postgres-data:

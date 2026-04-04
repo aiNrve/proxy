@@ -79,8 +79,8 @@ func (m *metricsStore) snapshot() metricsSnapshot {
 	}
 }
 
-// ChatCompletions handles OpenAI-compatible completion requests.
-func (s *Server) ChatCompletions(c *gin.Context) {
+// chatCompletions handles OpenAI-compatible completion requests.
+func (s *Server) chatCompletions(c *gin.Context) {
 	var req models.ChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid request payload"})
@@ -179,16 +179,16 @@ func (s *Server) ChatCompletions(c *gin.Context) {
 	c.JSON(http.StatusBadGateway, gin.H{"error": "all provider attempts failed"})
 }
 
-// Health returns proxy and provider liveness state.
-func (s *Server) Health(c *gin.Context) {
+// health returns proxy and provider liveness state.
+func (s *Server) health(c *gin.Context) {
 	c.JSON(http.StatusOK, gin.H{
 		"status":    "ok",
 		"providers": s.router.HealthSnapshot(),
 	})
 }
 
-// Metrics exposes basic Prometheus-compatible metrics.
-func (s *Server) Metrics(c *gin.Context) {
+// metricsHandler exposes basic Prometheus-compatible metrics.
+func (s *Server) metricsHandler(c *gin.Context) {
 	snapshot := s.metrics.snapshot()
 	c.Header("Content-Type", "text/plain; version=0.0.4")
 	c.Status(http.StatusOK)

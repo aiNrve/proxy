@@ -1,0 +1,11 @@
+.git
+.agent
+.env
+.env.*
+*.log
+*.out
+coverage.*
+*.test
+bin/
+dist/
+/tmp/

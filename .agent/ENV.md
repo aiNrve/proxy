@@ -16,3 +16,5 @@ AINRVE_API_KEY        — master key clients must send (if not set,
                         no auth — fine for local/dev use)
 LOG_LEVEL             — debug|info|warn|error (default: info)
 HEALTH_CHECK_INTERVAL — seconds between provider pings (default: 30)
+RATE_LIMIT_RPS        — requests per second per API key/IP (default: 10)
+RATE_LIMIT_BURST      — token bucket burst size (default: 20)

@@ -50,9 +50,9 @@ func NewServer(cfg config.Config, rt *router.Router, requestLogger *logger.Logge
 		s.recoveryMiddleware(),
 	)
 
-	s.engine.POST("/v1/chat/completions", s.ChatCompletions)
-	s.engine.GET("/health", s.Health)
-	s.engine.GET("/metrics", s.Metrics)
+	s.engine.POST("/v1/chat/completions", s.chatCompletions)
+	s.engine.GET("/health", s.health)
+	s.engine.GET("/metrics", s.metricsHandler)
 
 	return s, nil
 }
