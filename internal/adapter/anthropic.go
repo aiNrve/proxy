@@ -104,7 +104,11 @@ func (a *AnthropicAdapter) Complete(ctx context.Context, req *models.ChatRequest
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
-		return nil, fmt.Errorf("provider anthropic returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &ProviderError{
+			Provider:   "anthropic",
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	var providerResp anthropicResponse
@@ -147,7 +151,11 @@ func (a *AnthropicAdapter) CompleteStream(ctx context.Context, req *models.ChatR
 	if resp.StatusCode >= http.StatusBadRequest {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
-		return nil, fmt.Errorf("provider anthropic stream returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &ProviderError{
+			Provider:   "anthropic",
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	out := make(chan string, 32)

@@ -112,7 +112,11 @@ func (a *GeminiAdapter) Complete(ctx context.Context, req *models.ChatRequest) (
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
-		return nil, fmt.Errorf("provider gemini returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &ProviderError{
+			Provider:   "gemini",
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	var providerResp geminiResponse
@@ -158,7 +162,11 @@ func (a *GeminiAdapter) CompleteStream(ctx context.Context, req *models.ChatRequ
 	if resp.StatusCode >= http.StatusBadRequest {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
-		return nil, fmt.Errorf("provider gemini stream returned %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &ProviderError{
+			Provider:   "gemini",
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	out := make(chan string, 32)

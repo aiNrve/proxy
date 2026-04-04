@@ -78,7 +78,11 @@ func (a *openAICompatAdapter) Complete(ctx context.Context, req *models.ChatRequ
 
 	if resp.StatusCode >= http.StatusBadRequest {
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
-		return nil, fmt.Errorf("provider %s returned %d: %s", a.providerName, resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &ProviderError{
+			Provider:   a.providerName,
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	var out models.ChatResponse
@@ -113,7 +117,11 @@ func (a *openAICompatAdapter) CompleteStream(ctx context.Context, req *models.Ch
 	if resp.StatusCode >= http.StatusBadRequest {
 		defer resp.Body.Close()
 		body, _ := io.ReadAll(io.LimitReader(resp.Body, 16*1024))
-		return nil, fmt.Errorf("provider %s stream returned %d: %s", a.providerName, resp.StatusCode, strings.TrimSpace(string(body)))
+		return nil, &ProviderError{
+			Provider:   a.providerName,
+			StatusCode: resp.StatusCode,
+			Body:       strings.TrimSpace(string(body)),
+		}
 	}
 
 	out := make(chan string, 32)
