@@ -30,7 +30,7 @@ type Router struct {
 
 // NewRouter creates a router from the external adapter registry and runtime config.
 func NewRouter(registry *adapters.Registry, cfg config.Config) *Router {
-	registered := make([]adapters.Adapter, 0)
+	registered := make([]adapter.Adapter, 0)
 	if registry != nil {
 		registered = registry.All()
 	}
@@ -44,8 +44,7 @@ func NewRouter(registry *adapters.Registry, cfg config.Config) *Router {
 		latency:      newLatencyTracker(100),
 	}
 
-	for _, external := range registered {
-		item := adapter.WrapExternal(external)
+	for _, item := range registered {
 		if item == nil {
 			continue
 		}

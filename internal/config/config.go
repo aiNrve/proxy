@@ -84,6 +84,7 @@ func (l *Loader) Reload() error {
 	}
 
 	cfg = normalize(cfg)
+	cfg = applyProviderEnvOverrides(cfg)
 	if err := validate(cfg); err != nil {
 		return err
 	}
@@ -227,6 +228,28 @@ func providerDefaults() map[string]string {
 		"together":  "https://api.together.ai",
 		"gemini":    "https://generativelanguage.googleapis.com",
 	}
+}
+
+func applyProviderEnvOverrides(cfg Config) Config {
+	providerKeyEnv := map[string]string{
+		"openai":    "OPENAI_API_KEY",
+		"anthropic": "ANTHROPIC_API_KEY",
+		"groq":      "GROQ_API_KEY",
+		"together":  "TOGETHER_API_KEY",
+		"gemini":    "GEMINI_API_KEY",
+		"ollama":    "OLLAMA_API_KEY",
+	}
+
+	for provider, env := range providerKeyEnv {
+		if key := strings.TrimSpace(os.Getenv(env)); key != "" {
+			item := cfg.Providers[provider]
+			item.APIKey = key
+			item.Enabled = true
+			cfg.Providers[provider] = item
+		}
+	}
+
+	return cfg
 }
 
 func cloneConfig(cfg Config) Config {

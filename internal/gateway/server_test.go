@@ -7,9 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/aiNrve/proxy/internal/adapter"
+	"github.com/aiNrve/adapters"
 	"github.com/aiNrve/proxy/internal/config"
-	"github.com/aiNrve/proxy/internal/models"
 	"github.com/aiNrve/proxy/internal/router"
 	"go.uber.org/zap"
 )
@@ -22,22 +21,26 @@ func (f *fakeAdapter) Name() string {
 	return f.name
 }
 
-func (f *fakeAdapter) Complete(_ context.Context, _ *models.ChatRequest) (*models.ChatResponse, error) {
-	return &models.ChatResponse{ID: "ok"}, nil
+func (f *fakeAdapter) Complete(_ context.Context, _ *adapters.Request) (*adapters.Response, error) {
+	return &adapters.Response{ID: "ok"}, nil
 }
 
-func (f *fakeAdapter) CompleteStream(_ context.Context, _ *models.ChatRequest) (<-chan string, error) {
-	ch := make(chan string)
+func (f *fakeAdapter) CompleteStream(_ context.Context, _ *adapters.Request) (<-chan adapters.StreamChunk, error) {
+	ch := make(chan adapters.StreamChunk)
 	close(ch)
 	return ch, nil
 }
 
-func (f *fakeAdapter) EstimateCost(_ *models.ChatRequest) float64 {
+func (f *fakeAdapter) EstimateCost(_ *adapters.Request) float64 {
 	return 0.1
 }
 
 func (f *fakeAdapter) IsHealthy(_ context.Context) bool {
 	return true
+}
+
+func (f *fakeAdapter) Models() []string {
+	return []string{"test-model"}
 }
 
 func TestNewServerAndHandler(t *testing.T) {
@@ -47,7 +50,10 @@ func TestNewServerAndHandler(t *testing.T) {
 		},
 	}
 
-	rt := router.NewRouter([]adapter.Adapter{&fakeAdapter{name: "openai"}}, cfg)
+	registry := adapters.NewRegistry()
+	registry.Register("openai", &fakeAdapter{name: "openai"})
+
+	rt := router.NewRouter(registry, cfg)
 	s, err := NewServer(cfg, rt, nil, zap.NewNop())
 	if err != nil {
 		t.Fatalf("new server returned error: %v", err)

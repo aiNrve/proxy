@@ -1,17 +1,14 @@
 package adapter
 
-import "strings"
+import (
+	extadapters "github.com/aiNrve/adapters"
+	exttogether "github.com/aiNrve/adapters/providers/together"
+)
 
-// TogetherAdapter implements the Together AI provider using OpenAI-compatible APIs.
-type TogetherAdapter struct {
-	*openAICompatAdapter
-}
-
-// NewTogetherAdapter builds a Together adapter with sensible defaults.
-func NewTogetherAdapter(apiKey, baseURL string) *TogetherAdapter {
-	if strings.TrimSpace(baseURL) == "" {
-		baseURL = "https://api.together.ai"
-	}
-	core := newOpenAICompatAdapter("together", apiKey, baseURL, 0.0008, 0.0008)
-	return &TogetherAdapter{openAICompatAdapter: core}
+// NewTogetherAdapter builds a Together adapter using the external adapters module.
+func NewTogetherAdapter(apiKey, baseURL string) Adapter {
+	return exttogether.New(extadapters.AdapterConfig{
+		APIKey:  apiKey,
+		BaseURL: baseURL,
+	})
 }

@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/aiNrve/proxy/internal/adapter"
+	"github.com/aiNrve/adapters"
 	"github.com/aiNrve/proxy/internal/config"
 	"github.com/aiNrve/proxy/internal/models"
 )
@@ -21,22 +21,26 @@ func (f *fakeAdapter) Name() string {
 	return f.name
 }
 
-func (f *fakeAdapter) Complete(_ context.Context, _ *models.ChatRequest) (*models.ChatResponse, error) {
-	return &models.ChatResponse{ID: "ok"}, nil
+func (f *fakeAdapter) Complete(_ context.Context, _ *adapters.Request) (*adapters.Response, error) {
+	return &adapters.Response{ID: "ok"}, nil
 }
 
-func (f *fakeAdapter) CompleteStream(_ context.Context, _ *models.ChatRequest) (<-chan string, error) {
-	ch := make(chan string)
+func (f *fakeAdapter) CompleteStream(_ context.Context, _ *adapters.Request) (<-chan adapters.StreamChunk, error) {
+	ch := make(chan adapters.StreamChunk)
 	close(ch)
 	return ch, nil
 }
 
-func (f *fakeAdapter) EstimateCost(_ *models.ChatRequest) float64 {
+func (f *fakeAdapter) EstimateCost(_ *adapters.Request) float64 {
 	return f.cost
 }
 
 func (f *fakeAdapter) IsHealthy(_ context.Context) bool {
 	return f.healthy
+}
+
+func (f *fakeAdapter) Models() []string {
+	return []string{"test-model"}
 }
 
 func TestRouteScoringTable(t *testing.T) {
@@ -131,7 +135,11 @@ func TestRouteScoringTable(t *testing.T) {
 			openai := &fakeAdapter{name: "openai", cost: 1.0, healthy: true}
 			groq := &fakeAdapter{name: "groq", cost: 0.1, healthy: true}
 
-			r := NewRouter([]adapter.Adapter{openai, groq}, tt.cfg)
+			registry := adapters.NewRegistry()
+			registry.Register("openai", openai)
+			registry.Register("groq", groq)
+
+			r := NewRouter(registry, tt.cfg)
 			if tt.seed != nil {
 				tt.seed(r)
 			}
@@ -172,7 +180,11 @@ func TestRouterRecordOutcomeAndHealthChecker(t *testing.T) {
 		},
 	}
 	openai := &fakeAdapter{name: "openai", cost: 1, healthy: true}
-	r := NewRouter([]adapter.Adapter{openai}, cfg)
+
+	registry := adapters.NewRegistry()
+	registry.Register("openai", openai)
+
+	r := NewRouter(registry, cfg)
 
 	r.RecordOutcome("openai", 50*time.Millisecond, 0, errors.New("upstream error"))
 	if r.HealthSnapshot()["openai"] {

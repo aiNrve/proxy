@@ -134,28 +134,52 @@ func buildLogger(level string) (*zap.Logger, error) {
 func buildRegistry(cfg config.Config, appLogger *zap.Logger) *adapters.Registry {
 	registry := adapters.NewRegistry()
 
-	if provider := cfg.Providers["openai"]; provider.Enabled {
-		registry.Register("openai", openai.New(adapterConfig(provider)))
+	if provider := cfg.Providers["openai"]; provider.Enabled && strings.TrimSpace(provider.APIKey) != "" {
+		registry.Register("openai", openai.New(adapters.AdapterConfig{
+			APIKey:  provider.APIKey,
+			BaseURL: provider.BaseURL,
+			Weight:  provider.Weight,
+		}))
 	}
 
-	if provider := cfg.Providers["anthropic"]; provider.Enabled {
-		registry.Register("anthropic", anthropic.New(adapterConfig(provider)))
+	if provider := cfg.Providers["anthropic"]; provider.Enabled && strings.TrimSpace(provider.APIKey) != "" {
+		registry.Register("anthropic", anthropic.New(adapters.AdapterConfig{
+			APIKey:  provider.APIKey,
+			BaseURL: provider.BaseURL,
+			Weight:  provider.Weight,
+		}))
 	}
 
-	if provider := cfg.Providers["groq"]; provider.Enabled {
-		registry.Register("groq", groq.New(adapterConfig(provider)))
+	if provider := cfg.Providers["groq"]; provider.Enabled && strings.TrimSpace(provider.APIKey) != "" {
+		registry.Register("groq", groq.New(adapters.AdapterConfig{
+			APIKey:  provider.APIKey,
+			BaseURL: provider.BaseURL,
+			Weight:  provider.Weight,
+		}))
 	}
 
-	if provider := cfg.Providers["together"]; provider.Enabled {
-		registry.Register("together", together.New(adapterConfig(provider)))
+	if provider := cfg.Providers["together"]; provider.Enabled && strings.TrimSpace(provider.APIKey) != "" {
+		registry.Register("together", together.New(adapters.AdapterConfig{
+			APIKey:  provider.APIKey,
+			BaseURL: provider.BaseURL,
+			Weight:  provider.Weight,
+		}))
 	}
 
-	if provider := cfg.Providers["gemini"]; provider.Enabled {
-		registry.Register("gemini", gemini.New(adapterConfig(provider)))
+	if provider := cfg.Providers["gemini"]; provider.Enabled && strings.TrimSpace(provider.APIKey) != "" {
+		registry.Register("gemini", gemini.New(adapters.AdapterConfig{
+			APIKey:  provider.APIKey,
+			BaseURL: provider.BaseURL,
+			Weight:  provider.Weight,
+		}))
 	}
 
-	if provider := cfg.Providers["ollama"]; provider.Enabled {
-		registry.Register("ollama", ollama.New(adapterConfig(provider)))
+	if provider := cfg.Providers["ollama"]; provider.Enabled && strings.TrimSpace(provider.APIKey) != "" {
+		registry.Register("ollama", ollama.New(adapters.AdapterConfig{
+			APIKey:  provider.APIKey,
+			BaseURL: provider.BaseURL,
+			Weight:  provider.Weight,
+		}))
 	}
 
 	if len(registry.All()) == 0 {
@@ -163,12 +187,4 @@ func buildRegistry(cfg config.Config, appLogger *zap.Logger) *adapters.Registry 
 	}
 
 	return registry
-}
-
-func adapterConfig(provider config.ProviderConfig) adapters.AdapterConfig {
-	return adapters.AdapterConfig{
-		APIKey:  provider.APIKey,
-		BaseURL: provider.BaseURL,
-		Weight:  provider.Weight,
-	}
 }

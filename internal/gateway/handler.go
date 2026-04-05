@@ -110,10 +110,12 @@ func (s *Server) chatCompletions(c *gin.Context) {
 		}
 
 		providerName := decision.Provider
+		externalReq := adapter.ToExternalRequest(&req)
 		callStart := time.Now()
 
 		if req.Stream {
-			stream, streamErr := selectedAdapter.CompleteStream(routeCtx, &req)
+			stream, streamErr := selectedAdapter.CompleteStream(routeCtx, externalReq)
+			streamErr = adapter.ConvertExternalError(streamErr)
 			statusCode := providerStatusCode(streamErr)
 			callLatency := time.Since(callStart)
 			s.router.RecordOutcome(providerName, callLatency, statusCode, streamErr)
@@ -124,13 +126,13 @@ func (s *Server) chatCompletions(c *gin.Context) {
 					continue
 				}
 				s.metrics.record(providerName, routingLatency, true)
-				s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, nil, selectedAdapter.EstimateCost(&req), callLatency, streamErr)
+				s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, nil, selectedAdapter.EstimateCost(externalReq), callLatency, streamErr)
 				c.JSON(statusCodeForClient(statusCode), gin.H{"error": streamErr.Error()})
 				return
 			}
 
 			s.metrics.record(providerName, routingLatency, false)
-			s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, nil, selectedAdapter.EstimateCost(&req), callLatency, nil)
+			s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, nil, selectedAdapter.EstimateCost(externalReq), callLatency, nil)
 			c.Header("X-AiNrve-Provider", providerName)
 			c.Header("X-AiNrve-Route-Reason", decision.Reason)
 			c.Header("Content-Type", "text/event-stream")
@@ -144,14 +146,40 @@ func (s *Server) chatCompletions(c *gin.Context) {
 				return
 			}
 
-			for line := range stream {
-				_, _ = fmt.Fprintf(c.Writer, "%s\n\n", line)
-				flusher.Flush()
+			for chunk := range stream {
+				if chunk.Error != nil {
+					_, _ = fmt.Fprintf(c.Writer, "%s\n\n", adapter.StreamErrorLine(adapter.ConvertExternalError(chunk.Error)))
+					_, _ = fmt.Fprint(c.Writer, "data: [DONE]\n\n")
+					flusher.Flush()
+					return
+				}
+
+				if chunk.Delta != "" {
+					line, lineErr := adapter.StreamDeltaLine(chunk.Delta)
+					if lineErr != nil {
+						_, _ = fmt.Fprintf(c.Writer, "%s\n\n", adapter.StreamErrorLine(lineErr))
+						_, _ = fmt.Fprint(c.Writer, "data: [DONE]\n\n")
+						flusher.Flush()
+						return
+					}
+					_, _ = fmt.Fprintf(c.Writer, "%s\n\n", line)
+					flusher.Flush()
+				}
+
+				if chunk.Done {
+					_, _ = fmt.Fprint(c.Writer, "data: [DONE]\n\n")
+					flusher.Flush()
+					return
+				}
 			}
+
+			_, _ = fmt.Fprint(c.Writer, "data: [DONE]\n\n")
+			flusher.Flush()
 			return
 		}
 
-		resp, completeErr := selectedAdapter.Complete(routeCtx, &req)
+		externalResp, completeErr := selectedAdapter.Complete(routeCtx, externalReq)
+		completeErr = adapter.ConvertExternalError(completeErr)
 		statusCode := providerStatusCode(completeErr)
 		callLatency := time.Since(callStart)
 		s.router.RecordOutcome(providerName, callLatency, statusCode, completeErr)
@@ -163,13 +191,14 @@ func (s *Server) chatCompletions(c *gin.Context) {
 			}
 
 			s.metrics.record(providerName, routingLatency, true)
-			s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, nil, selectedAdapter.EstimateCost(&req), callLatency, completeErr)
+			s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, nil, selectedAdapter.EstimateCost(externalReq), callLatency, completeErr)
 			c.JSON(statusCodeForClient(statusCode), gin.H{"error": completeErr.Error()})
 			return
 		}
 
+		resp := adapter.FromExternalResponse(externalResp)
 		s.metrics.record(providerName, routingLatency, false)
-		s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, resp, selectedAdapter.EstimateCost(&req), callLatency, nil)
+		s.enqueueRequestLog(c.GetString(requestIDContextKey), providerName, &req, resp, selectedAdapter.EstimateCost(externalReq), callLatency, nil)
 		c.Header("X-AiNrve-Provider", providerName)
 		c.Header("X-AiNrve-Route-Reason", decision.Reason)
 		c.JSON(http.StatusOK, resp)

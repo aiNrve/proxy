@@ -79,6 +79,7 @@ func (t *latencyTracker) P50(provider string) float64 {
 func (r *Router) scoredCandidates(ctx context.Context, req *models.ChatRequest) []scoredCandidate {
 	now := time.Now()
 	excluded := excludedProviderSetFromContext(ctx)
+	externalReq := adapter.ToExternalRequest(req)
 
 	r.mu.RLock()
 	weights := r.weightsLocked()
@@ -94,7 +95,7 @@ func (r *Router) scoredCandidates(ctx context.Context, req *models.ChatRequest) 
 		candidate := scoredCandidate{
 			name:      name,
 			adapter:   item,
-			cost:      item.EstimateCost(req),
+			cost:      item.EstimateCost(externalReq),
 			latencyMS: r.latency.P50(name),
 			weight:    providerWeight(r.cfg, name),
 		}
