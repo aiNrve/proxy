@@ -49,37 +49,46 @@ type Config struct {
 
 // Loader manages live configuration state and hot reload behavior.
 type Loader struct {
-	mu  sync.RWMutex
-	cfg Config
-	vp  *viper.Viper
+	mu         sync.RWMutex
+	cfg        Config
+	watchViper *viper.Viper
+	configPath string
 }
 
 // NewLoader initializes a Loader from file + environment and enables hot reload.
 func NewLoader(configPath string) (*Loader, error) {
-	vp := viper.New()
-	configureViper(vp, configPath)
+	resolvedPath := effectiveConfigPath(configPath)
 
-	l := &Loader{vp: vp}
+	watchViper := viper.New()
+	configureViper(watchViper, resolvedPath)
+
+	l := &Loader{
+		watchViper: watchViper,
+		configPath: resolvedPath,
+	}
 	if err := l.Reload(); err != nil {
 		return nil, err
 	}
 
-	vp.OnConfigChange(func(_ fsnotify.Event) {
+	watchViper.OnConfigChange(func(_ fsnotify.Event) {
 		_ = l.Reload()
 	})
-	vp.WatchConfig()
+	watchViper.WatchConfig()
 
 	return l, nil
 }
 
 // Reload refreshes runtime config from disk + environment.
 func (l *Loader) Reload() error {
-	if err := readConfigFile(l.vp); err != nil {
+	vp := viper.New()
+	configureViper(vp, l.configPath)
+
+	if err := readConfigFile(vp); err != nil {
 		return err
 	}
 
 	cfg := Config{}
-	if err := l.vp.Unmarshal(&cfg); err != nil {
+	if err := vp.Unmarshal(&cfg); err != nil {
 		return fmt.Errorf("unmarshal config: %w", err)
 	}
 
@@ -103,14 +112,18 @@ func (l *Loader) Get() Config {
 	return cloneConfig(l.cfg)
 }
 
-func configureViper(vp *viper.Viper, configPath string) {
-	if strings.TrimSpace(configPath) == "" {
-		if envPath := strings.TrimSpace(os.Getenv("CONFIG_PATH")); envPath != "" {
-			configPath = envPath
-		} else {
-			configPath = defaultConfigPath
-		}
+func effectiveConfigPath(configPath string) string {
+	if strings.TrimSpace(configPath) != "" {
+		return configPath
 	}
+	if envPath := strings.TrimSpace(os.Getenv("CONFIG_PATH")); envPath != "" {
+		return envPath
+	}
+	return defaultConfigPath
+}
+
+func configureViper(vp *viper.Viper, configPath string) {
+	configPath = effectiveConfigPath(configPath)
 
 	vp.SetConfigFile(configPath)
 	vp.SetConfigType("yaml")
