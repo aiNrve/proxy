@@ -1,6 +1,8 @@
 # aiNrve/proxy
 
+[![CI](https://github.com/aiNrve/proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/aiNrve/proxy/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Go version](https://img.shields.io/badge/go-1.21+-blue.svg)](https://golang.org)
 
 The nervous system for your AI stack: route every LLM inference call to the fastest, cheapest available provider automatically.
 
