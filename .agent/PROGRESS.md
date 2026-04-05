@@ -29,9 +29,10 @@
 - [x] Router now accepts adapters registry input
 - [x] Added compatibility wrapper from external adapters to internal gateway contract
 - [x] go build ./... passes after registry migration
+- [x] Replaced inline adapters with github.com/aiNrve/adapters module
 
 ## Current session working on
-Completed adapter registry migration and build verification
+Completed adapter module migration, verification, and documentation updates
 
 ## Known issues / blockers
 (add anything here that is incomplete or needs revisiting)

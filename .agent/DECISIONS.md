@@ -32,3 +32,10 @@ Provider construction in cmd/proxy now builds an adapters.Registry and registers
 enabled providers from external provider packages.
 Reason: centralize provider implementations in a shared module while preserving
 current gateway/router behavior via a small internal compatibility wrapper.
+
+## ADR-008: Replaced inline adapters with github.com/aiNrve/adapters module
+The internal/adapter package no longer maintains provider-specific inline HTTP
+implementations. It now acts as a thin shim that aliases external adapter
+interfaces/config and delegates provider construction to external packages.
+Reason: remove duplicated provider logic and keep provider behavior consistent
+across aiNrve services.
