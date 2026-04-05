@@ -1,6 +1,5 @@
 # aiNrve/proxy
 
-[![CI](https://github.com/aiNrve/{repo}/actions/workflows/ci.yml/badge.svg)](https://github.com/aiNrve/{repo}/actions/workflows/ci.yml)
 [![CI](https://github.com/aiNrve/proxy/actions/workflows/ci.yml/badge.svg)](https://github.com/aiNrve/proxy/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Go version](https://img.shields.io/badge/go-1.22-blue.svg)](https://golang.org)
